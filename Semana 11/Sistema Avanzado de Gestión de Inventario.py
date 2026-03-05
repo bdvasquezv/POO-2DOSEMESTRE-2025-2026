@@ -1,137 +1,204 @@
-import pickle
-import os
+# Sistema de Gestión de Biblioteca Digital
 
-# Clase Producto
-class Producto:
-    def __init__(self, id, nombre, cantidad, precio):
-        self.id = id
-        self.nombre = nombre
-        self.cantidad = cantidad
-        self.precio = precio
+# Clase Libro
+class Libro:
+    def __init__(self, titulo, autor, categoria, isbn):
+        # Tupla para almacenar título y autor (no cambian)
+        self.info = (titulo, autor)
+        self.categoria = categoria
+        self.isbn = isbn
+        self.prestado = False
 
     def __str__(self):
-        return f"ID: {self.id}, Nombre: {self.nombre}, Cantidad: {self.cantidad}, Precio: ${self.precio:.2f}"
-
-    def actualizar_cantidad(self, cantidad):
-        self.cantidad = cantidad
-
-    def actualizar_precio(self, precio):
-        self.precio = precio
+        estado = "Prestado" if self.prestado else "Disponible"
+        return f"Título: {self.info[0]}, Autor: {self.info[1]}, Categoría: {self.categoria}, ISBN: {self.isbn}, Estado: {estado}"
 
 
-# Clase Inventario
-class Inventario:
+# Clase Usuario
+class Usuario:
+    def __init__(self, nombre, id_usuario):
+        self.nombre = nombre
+        self.id_usuario = id_usuario
+        # Lista para libros prestados
+        self.libros_prestados = []
+
+    def __str__(self):
+        return f"Usuario: {self.nombre}, ID: {self.id_usuario}"
+
+
+# Clase Biblioteca
+class Biblioteca:
     def __init__(self):
-        self.productos = {}  # Diccionario para almacenar productos por ID
+        # Diccionario para almacenar libros usando ISBN como clave
+        self.libros = {}
+        # Diccionario para usuarios
+        self.usuarios = {}
+        # Set para asegurar IDs únicos
+        self.ids_usuarios = set()
 
-    def agregar_producto(self, producto):
-        if producto.id in self.productos:
-            print("Error: Ya existe un producto con este ID.")
+    # Añadir libro
+    def agregar_libro(self, libro):
+        if libro.isbn in self.libros:
+            print("Este libro ya existe.")
         else:
-            self.productos[producto.id] = producto
-            print(f"Producto '{producto.nombre}' agregado al inventario.")
+            self.libros[libro.isbn] = libro
+            print("Libro agregado correctamente.")
 
-    def eliminar_producto(self, id):
-        if id in self.productos:
-            del self.productos[id]
-            print(f"Producto con ID {id} eliminado.")
+    # Quitar libro
+    def eliminar_libro(self, isbn):
+        if isbn in self.libros:
+            del self.libros[isbn]
+            print("Libro eliminado.")
         else:
-            print("Error: No se encontró un producto con este ID.")
+            print("Libro no encontrado.")
 
-    def actualizar_producto(self, id, cantidad=None, precio=None):
-        if id in self.productos:
-            producto = self.productos[id]
-            if cantidad is not None:
-                producto.actualizar_cantidad(cantidad)
-            if precio is not None:
-                producto.actualizar_precio(precio)
-            print(f"Producto con ID {id} actualizado.")
+    # Registrar usuario
+    def registrar_usuario(self, usuario):
+        if usuario.id_usuario in self.ids_usuarios:
+            print("El ID de usuario ya existe.")
         else:
-            print("Error: No se encontró un producto con este ID.")
+            self.usuarios[usuario.id_usuario] = usuario
+            self.ids_usuarios.add(usuario.id_usuario)
+            print("Usuario registrado correctamente.")
 
-    def buscar_por_nombre(self, nombre):
-        resultados = [p for p in self.productos.values() if nombre.lower() in p.nombre.lower()]
-        if resultados:
-            print("Resultados de la búsqueda:")
-            for producto in resultados:
-                print(producto)
+    # Dar de baja usuario
+    def eliminar_usuario(self, id_usuario):
+        if id_usuario in self.usuarios:
+            del self.usuarios[id_usuario]
+            self.ids_usuarios.remove(id_usuario)
+            print("Usuario eliminado.")
         else:
-            print("No se encontraron productos con ese nombre.")
+            print("Usuario no encontrado.")
 
-    def mostrar_inventario(self):
-        if self.productos:
-            print("Inventario actual:")
-            for producto in self.productos.values():
-                print(producto)
+    # Prestar libro
+    def prestar_libro(self, isbn, id_usuario):
+        if isbn in self.libros and id_usuario in self.usuarios:
+            libro = self.libros[isbn]
+            usuario = self.usuarios[id_usuario]
+
+            if not libro.prestado:
+                libro.prestado = True
+                usuario.libros_prestados.append(libro)
+                print("Libro prestado correctamente.")
+            else:
+                print("El libro ya está prestado.")
         else:
-            print("El inventario está vacío.")
+            print("Libro o usuario no encontrado.")
 
-    def guardar_inventario(self, archivo):
-        with open(archivo, 'wb') as f:
-            pickle.dump(self.productos, f)
-        print(f"Inventario guardado en '{archivo}'.")
+    # Devolver libro
+    def devolver_libro(self, isbn, id_usuario):
+        if isbn in self.libros and id_usuario in self.usuarios:
+            libro = self.libros[isbn]
+            usuario = self.usuarios[id_usuario]
 
-    def cargar_inventario(self, archivo):
-        if os.path.exists(archivo):
-            with open(archivo, 'rb') as f:
-                self.productos = pickle.load(f)
-            print(f"Inventario cargado desde '{archivo}'.")
+            if libro in usuario.libros_prestados:
+                libro.prestado = False
+                usuario.libros_prestados.remove(libro)
+                print("Libro devuelto correctamente.")
+            else:
+                print("Ese usuario no tiene este libro.")
         else:
-            print("No se encontró el archivo de inventario. Se creará uno nuevo al guardar.")
+            print("Libro o usuario no encontrado.")
+
+    # Buscar libros
+    def buscar_libro(self, criterio):
+        encontrados = []
+
+        for libro in self.libros.values():
+            if (criterio.lower() in libro.info[0].lower() or
+                criterio.lower() in libro.info[1].lower() or
+                criterio.lower() in libro.categoria.lower()):
+                encontrados.append(libro)
+
+        if encontrados:
+            print("\nResultados de búsqueda:")
+            for libro in encontrados:
+                print(libro)
+        else:
+            print("No se encontraron libros.")
+
+    # Listar libros prestados de un usuario
+    def libros_usuario(self, id_usuario):
+        if id_usuario in self.usuarios:
+            usuario = self.usuarios[id_usuario]
+            if usuario.libros_prestados:
+                print(f"\nLibros prestados a {usuario.nombre}:")
+                for libro in usuario.libros_prestados:
+                    print(libro)
+            else:
+                print("Este usuario no tiene libros prestados.")
+        else:
+            print("Usuario no encontrado.")
 
 
-# Interfaz de Usuario
+# Menú de prueba del sistema
 def menu():
-    inventario = Inventario()
-    archivo_inventario = "inventario.dat"
-    inventario.cargar_inventario(archivo_inventario)
+    biblioteca = Biblioteca()
 
     while True:
-        print("\n--- Menú de Gestión de Inventario ---")
-        print("1. Agregar producto")
-        print("2. Eliminar producto")
-        print("3. Actualizar producto")
-        print("4. Buscar producto por nombre")
-        print("5. Mostrar inventario")
-        print("6. Guardar y salir")
+        print("\n--- Biblioteca Digital ---")
+        print("1. Agregar libro")
+        print("2. Eliminar libro")
+        print("3. Registrar usuario")
+        print("4. Eliminar usuario")
+        print("5. Prestar libro")
+        print("6. Devolver libro")
+        print("7. Buscar libro")
+        print("8. Ver libros de un usuario")
+        print("9. Salir")
+
         opcion = input("Seleccione una opción: ")
 
         if opcion == "1":
-            id = int(input("Ingrese el ID del producto: "))
-            nombre = input("Ingrese el nombre del producto: ")
-            cantidad = int(input("Ingrese la cantidad del producto: "))
-            precio = float(input("Ingrese el precio del producto: "))
-            producto = Producto(id, nombre, cantidad, precio)
-            inventario.agregar_producto(producto)
+            titulo = input("Título: ")
+            autor = input("Autor: ")
+            categoria = input("Categoría: ")
+            isbn = input("ISBN: ")
+
+            libro = Libro(titulo, autor, categoria, isbn)
+            biblioteca.agregar_libro(libro)
 
         elif opcion == "2":
-            id = int(input("Ingrese el ID del producto a eliminar: "))
-            inventario.eliminar_producto(id)
+            isbn = input("ISBN del libro a eliminar: ")
+            biblioteca.eliminar_libro(isbn)
 
         elif opcion == "3":
-            id = int(input("Ingrese el ID del producto a actualizar: "))
-            cantidad = input("Ingrese la nueva cantidad (deje en blanco para no cambiar): ")
-            precio = input("Ingrese el nuevo precio (deje en blanco para no cambiar): ")
-            cantidad = int(cantidad) if cantidad else None
-            precio = float(precio) if precio else None
-            inventario.actualizar_producto(id, cantidad, precio)
+            nombre = input("Nombre del usuario: ")
+            id_usuario = input("ID del usuario: ")
+
+            usuario = Usuario(nombre, id_usuario)
+            biblioteca.registrar_usuario(usuario)
 
         elif opcion == "4":
-            nombre = input("Ingrese el nombre del producto a buscar: ")
-            inventario.buscar_por_nombre(nombre)
+            id_usuario = input("ID del usuario a eliminar: ")
+            biblioteca.eliminar_usuario(id_usuario)
 
         elif opcion == "5":
-            inventario.mostrar_inventario()
+            isbn = input("ISBN del libro: ")
+            id_usuario = input("ID del usuario: ")
+            biblioteca.prestar_libro(isbn, id_usuario)
 
         elif opcion == "6":
-            inventario.guardar_inventario(archivo_inventario)
-            print("Saliendo del programa...")
+            isbn = input("ISBN del libro: ")
+            id_usuario = input("ID del usuario: ")
+            biblioteca.devolver_libro(isbn, id_usuario)
+
+        elif opcion == "7":
+            criterio = input("Buscar por título, autor o categoría: ")
+            biblioteca.buscar_libro(criterio)
+
+        elif opcion == "8":
+            id_usuario = input("ID del usuario: ")
+            biblioteca.libros_usuario(id_usuario)
+
+        elif opcion == "9":
+            print("Saliendo del sistema...")
             break
 
         else:
-            print("Opción no válida. Intente de nuevo.")
+            print("Opción no válida.")
 
 
-# Ejecutar el programa
+# Ejecutar programa
 if __name__ == "__main__":
     menu()
