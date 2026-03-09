@@ -141,7 +141,7 @@ def menu():
 
     while True:
 
-        print("\n--- Sistema de Gestion de Biblioteca Digital ---")
+        print("\n--- Sistema  de Biblioteca Digital ---")
         print("1. Agregar libro")
         print("2. Quitar libro")
         print("3. Registrar usuario")
